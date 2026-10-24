@@ -1,26 +1,242 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Design tokens: electric lime on warm stone ---------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: oklch(0.985 0.001 106.4); /* stone-50 */
+  --foreground: oklch(0.147 0.004 49.3); /* stone-950 */
+  --muted: oklch(0.923 0.003 48.7); /* stone-200 */
+  --muted-foreground: oklch(0.444 0.011 73.6); /* stone-600 */
+
+  --glass: oklch(1 0 0 / 0.62);
+  --glass-strong: oklch(1 0 0 / 0.86);
+  --glass-border: oklch(0.147 0.004 49.3 / 0.08);
+  --glass-highlight: oklch(1 0 0 / 0.9);
+  --glass-shadow: 0 1px 2px oklch(0.147 0.004 49.3 / 0.04), 0 12px 32px -12px oklch(0.147 0.004 49.3 / 0.14);
+
+  --primary: oklch(0.841 0.238 128.9); /* lime-400 */
+  --primary-hover: oklch(0.897 0.196 126.7); /* lime-300 */
+  --primary-foreground: oklch(0.147 0.004 49.3);
+  --primary-text: oklch(0.532 0.157 131.6); /* lime-700, readable on light */
+  --primary-soft: oklch(0.841 0.238 128.9 / 0.18);
+
+  --border: oklch(0.147 0.004 49.3 / 0.1);
+  --input: oklch(0.147 0.004 49.3 / 0.04);
+  --ring: oklch(0.648 0.2 131.7); /* lime-600 */
+
+  --destructive: oklch(0.577 0.245 27.3);
+  --warning: oklch(0.666 0.179 58.3);
+  --success: oklch(0.627 0.194 149.2);
+
+  --chart-1: oklch(0.648 0.2 131.7);
+  --chart-2: oklch(0.841 0.238 128.9);
+  --chart-3: oklch(0.553 0.013 58.1);
+  --chart-4: oklch(0.769 0.188 70.1);
+  --chart-5: oklch(0.6 0.118 184.7);
+
+  --aurora-1: oklch(0.841 0.238 128.9 / 0.22);
+  --aurora-2: oklch(0.769 0.188 70.1 / 0.1);
+  --grain-opacity: 0.035;
+}
+
+.dark {
+  --background: oklch(0.147 0.004 49.3); /* stone-950 */
+  --foreground: oklch(0.97 0.001 106.4); /* stone-100 */
+  --muted: oklch(0.268 0.007 34.3); /* stone-800 */
+  --muted-foreground: oklch(0.709 0.01 56.3); /* stone-400 */
+
+  --glass: oklch(0.17 0.005 52 / 0.72);
+  --glass-strong: oklch(0.17 0.005 52 / 0.9);
+  --glass-border: oklch(1 0 0 / 0.08);
+  --glass-highlight: oklch(1 0 0 / 0.06);
+  --glass-shadow: 0 1px 2px oklch(0 0 0 / 0.3), 0 20px 48px -16px oklch(0 0 0 / 0.6);
+
+  --primary-text: oklch(0.897 0.196 126.7); /* lime-300 */
+  --primary-soft: oklch(0.841 0.238 128.9 / 0.14);
+
+  --border: oklch(1 0 0 / 0.09);
+  --input: oklch(1 0 0 / 0.04);
+  --ring: oklch(0.841 0.238 128.9);
+
+  --destructive: oklch(0.704 0.191 22.2);
+  --warning: oklch(0.828 0.189 84.4);
+  --success: oklch(0.792 0.209 151.7);
+
+  --chart-1: oklch(0.841 0.238 128.9);
+  --chart-2: oklch(0.648 0.2 131.7);
+  --chart-3: oklch(0.709 0.01 56.3);
+  --chart-4: oklch(0.828 0.189 84.4);
+  --chart-5: oklch(0.777 0.152 181.9);
+
+  --aurora-1: oklch(0.841 0.238 128.9 / 0.13);
+  --aurora-2: oklch(0.777 0.152 181.9 / 0.07);
+  --grain-opacity: 0.05;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-text: var(--primary-text);
+  --color-primary-soft: var(--primary-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  --font-display: var(--font-bricolage);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-pop-in: pop-in 200ms var(--ease-out-expo);
+  --animate-pop-out: pop-out 120ms ease-in forwards;
+  --animate-fade-in: fade-in 200ms ease-out;
+  --animate-fade-out: fade-out 150ms ease-in forwards;
+  --animate-dialog-in: dialog-in 280ms var(--ease-out-expo);
+  --animate-dialog-out: dialog-out 150ms ease-in forwards;
+  --animate-sheet-in: sheet-in 380ms var(--ease-out-expo);
+  --animate-sheet-out: sheet-out 200ms ease-in forwards;
+  --animate-accordion-down: accordion-down 260ms var(--ease-out-expo);
+  --animate-accordion-up: accordion-up 200ms ease-in;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.96) translateY(var(--pop-y, 4px)); }
+  }
+  @keyframes pop-out {
+    to { opacity: 0; transform: scale(0.97); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+  }
+  @keyframes fade-out {
+    to { opacity: 0; }
+  }
+  /* Centering uses the separate `translate` property (Tailwind v4), so only transform animates here. */
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); filter: blur(4px); }
+  }
+  @keyframes dialog-out {
+    to { opacity: 0; transform: translateY(4px) scale(0.97); }
+  }
+  @keyframes sheet-in {
+    from { transform: translateX(100%); }
+  }
+  @keyframes sheet-out {
+    to { transform: translateX(100%); }
+  }
+  @keyframes accordion-down {
+    from { height: 0; opacity: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; opacity: 0; }
+  }
+  @keyframes shimmer {
+    from { background-position: 150% 0; }
+    to { background-position: -50% 0; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ---------- Frosted glass ---------- */
+@utility glass {
+  background-color: var(--glass);
+  backdrop-filter: blur(32px) saturate(170%);
+  -webkit-backdrop-filter: blur(32px) saturate(170%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight), var(--glass-shadow);
+}
+
+/* Overlays sit on top of busy content, so they need more opacity to stay legible. */
+@utility glass-strong {
+  background-color: var(--glass-strong);
+  backdrop-filter: blur(44px) saturate(180%);
+  -webkit-backdrop-filter: blur(44px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight), var(--glass-shadow);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Aurora: glass only reads as glass when there is colour behind it. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background:
+      radial-gradient(40rem 28rem at 12% -6%, var(--aurora-1), transparent 70%),
+      radial-gradient(36rem 30rem at 92% 8%, var(--aurora-2), transparent 70%),
+      radial-gradient(44rem 30rem at 60% 110%, var(--aurora-1), transparent 70%);
+  }
+
+  /* Film grain: subtle texture that makes flat glass feel physical. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  :focus-visible {
+    outline: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }
