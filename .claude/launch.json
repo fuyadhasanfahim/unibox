@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "unibox-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "turbo", "run", "dev", "--ui=stream"],
+      "port": 3000
+    }
+  ]
+}

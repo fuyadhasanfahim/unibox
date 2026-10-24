@@ -11,5 +11,27 @@ services:
             - "127.0.0.1:${POSTGRES_PORT}:5432"
         volumes:
             - unibox-pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+    redis:
+        image: redis:7-alpine
+        container_name: unibox-redis
+        restart: unless-stopped
+        command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--appendonly", "yes"]
+        ports:
+            - "127.0.0.1:${REDIS_PORT}:6379"
+        volumes:
+            - unibox-redisdata:/data
+        healthcheck:
+            test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
+        environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD}
 volumes:
     unibox-pgdata:
+    unibox-redisdata:
