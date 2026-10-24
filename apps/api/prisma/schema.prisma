@@ -1,0 +1,12 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Models land in Phase 1 (User, Tenant, Membership, Invite, AuditLog).
+// See Obsidian vault: 03-Prisma-Schema-Proposal. Review every migration before applying.
