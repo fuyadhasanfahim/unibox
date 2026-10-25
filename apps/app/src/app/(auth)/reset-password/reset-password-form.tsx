@@ -17,7 +17,7 @@ type Errors = Partial<Record<"password" | "confirm", string>>;
 
 function InvalidLink() {
   return (
-    <div className="glass rounded-2xl">
+    <div>
       <Empty
         icon={LinkIcon}
         title="This link has expired"
@@ -62,6 +62,8 @@ export function ResetPasswordForm() {
       // Invalid, used or expired token.
       return setExpired(true);
     }
+    setPassword("");
+    setConfirm("");
     router.replace("/sign-in?notice=reset");
   }
 
@@ -75,12 +77,12 @@ export function ResetPasswordForm() {
       <div className="grid gap-5">
         <div className="grid gap-2.5">
           <Field label="New password" error={errors.password} hint="At least 12 characters.">
-            <PasswordInput autoComplete="new-password" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput autoComplete="new-password" autoFocus placeholder="Create a new password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <PasswordStrength password={password} />
         </div>
         <Field label="Confirm new password" error={errors.confirm}>
-          <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <PasswordInput autoComplete="new-password" placeholder="Repeat the new password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
       </div>
       <Button type="submit" size="lg" loading={pending} className="w-full">

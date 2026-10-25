@@ -50,7 +50,11 @@ export function SignInForm() {
       );
       return;
     }
-    router.replace(safeNext(params.get("next")));
+    // Next keeps visited routes mounted (cacheComponents/Activity): clear the form so the
+    // credentials are not still sitting there after sign-out, and not kept in memory.
+    setEmail("");
+    setPassword("");
+    router.replace(safeNext(params.get("next"), "/dashboard"));
     router.refresh();
   }
 
@@ -68,12 +72,23 @@ export function SignInForm() {
             autoFocus
             placeholder="you@company.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errors.email) setErrors((x) => ({ ...x, email: undefined }));
+            }}
           />
         </Field>
         <div className="grid gap-2">
           <Field label="Password" error={errors.password}>
-            <PasswordInput autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (errors.password) setErrors((x) => ({ ...x, password: undefined }));
+              }}
+            />
           </Field>
           <Link href="/forgot-password" className="justify-self-end text-xs font-medium text-primary-text hover:underline">
             Forgot password?

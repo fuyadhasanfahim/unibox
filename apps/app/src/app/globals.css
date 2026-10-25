@@ -115,6 +115,8 @@
   --animate-dialog-out: dialog-out 150ms ease-in forwards;
   --animate-sheet-in: sheet-in 380ms var(--ease-out-expo);
   --animate-sheet-out: sheet-out 200ms ease-in forwards;
+  --animate-sheet-in-left: sheet-in-left 380ms var(--ease-out-expo);
+  --animate-sheet-out-left: sheet-out-left 200ms ease-in forwards;
   --animate-accordion-down: accordion-down 260ms var(--ease-out-expo);
   --animate-accordion-up: accordion-up 200ms ease-in;
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
@@ -143,6 +145,12 @@
   }
   @keyframes sheet-out {
     to { transform: translateX(100%); }
+  }
+  @keyframes sheet-in-left {
+    from { transform: translateX(-110%); }
+  }
+  @keyframes sheet-out-left {
+    to { transform: translateX(-110%); }
   }
   @keyframes accordion-down {
     from { height: 0; opacity: 0; }

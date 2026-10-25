@@ -12,7 +12,8 @@ const BUBBLES = [
 // Left half of the auth screen: the brand promise, shown as live-looking messages arriving.
 export function BrandPanel() {
   return (
-    <div className="glass relative hidden h-full min-h-[560px] flex-col justify-between overflow-hidden rounded-3xl p-10 lg:flex">
+    // No card here: the brand side sits straight on the aurora, the form side gets the glass card.
+    <div className="relative hidden h-full min-h-[560px] flex-col justify-between p-6 lg:flex xl:p-10">
       <div aria-hidden className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-primary/25 blur-[90px]" />
       <div aria-hidden className="pointer-events-none absolute -bottom-32 -left-16 size-80 rounded-full bg-chart-5/15 blur-[90px]" />
 

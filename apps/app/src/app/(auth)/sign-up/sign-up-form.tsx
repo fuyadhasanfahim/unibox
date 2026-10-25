@@ -61,7 +61,7 @@ export function SignUpForm() {
 
   if (state.status === "invalid") {
     return (
-      <div className="glass rounded-2xl">
+      <div>
         <Empty
           icon={MailX}
           title="Invitation required"
@@ -80,7 +80,7 @@ export function SignUpForm() {
     <AcceptForm
       token={token}
       invite={state.invite}
-      onDone={(signedIn) => router.replace(signedIn ? "/" : "/sign-in?notice=joined")}
+      onDone={(signedIn) => router.replace(signedIn ? "/dashboard" : "/sign-in?notice=joined")}
     />
   );
 }
@@ -107,6 +107,8 @@ function AcceptForm({ token, invite, onDone }: { token: string; invite: Invitati
       const { email } = await api<{ email: string }>("/invites/accept", { method: "POST", body: JSON.stringify(parsed.data) });
       const { error } = await authClient.signIn.email({ email, password });
       // Account exists even if auto sign-in failed (e.g. rate limit): then send them to sign in.
+      setPassword("");
+      setConfirm("");
       onDone(!error);
     } catch (err) {
       setPending(false);
@@ -150,12 +152,12 @@ function AcceptForm({ token, invite, onDone }: { token: string; invite: Invitati
         </Field>
         <div className="grid gap-2.5">
           <Field label="Password" error={errors.password} hint="At least 12 characters. A passphrase works great.">
-            <PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput autoComplete="new-password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </Field>
           <PasswordStrength password={password} />
         </div>
         <Field label="Confirm password" error={errors.confirm}>
-          <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          <PasswordInput autoComplete="new-password" placeholder="Repeat your password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </Field>
       </div>
 

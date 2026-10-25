@@ -10,15 +10,22 @@ export const Sheet = SheetPrimitive.Root;
 export const SheetTrigger = SheetPrimitive.Trigger;
 export const SheetClose = SheetPrimitive.Close;
 
-// Right-side panel (filters, details, mobile nav).
-export function SheetContent({ className, children, ...props }: ComponentProps<typeof SheetPrimitive.Content>) {
+// Side panel: right for details/filters, left for mobile navigation.
+export function SheetContent({
+  className,
+  children,
+  side = "right",
+  ...props
+}: ComponentProps<typeof SheetPrimitive.Content> & { side?: "left" | "right" }) {
   return (
     <SheetPrimitive.Portal>
       <DialogOverlay />
       <SheetPrimitive.Content
         className={cn(
-          "glass-strong fixed inset-y-2 right-2 z-50 flex w-[calc(100%-1rem)] max-w-md flex-col gap-5 rounded-2xl p-6",
-          "data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out",
+          "glass-strong fixed inset-y-2 z-50 flex w-[calc(100%-1rem)] max-w-md flex-col gap-5 rounded-2xl p-6",
+          side === "right"
+            ? "right-2 data-[state=open]:animate-sheet-in data-[state=closed]:animate-sheet-out"
+            : "left-2 data-[state=open]:animate-sheet-in-left data-[state=closed]:animate-sheet-out-left",
           className,
         )}
         {...props}
