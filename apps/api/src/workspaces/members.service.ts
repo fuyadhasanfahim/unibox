@@ -1,5 +1,14 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { hasPermission, outranksOrEquals, tenantRoleSchema, type InviteMemberInput, type TenantRole } from '@repo/shared';
+import {
+  hasPermission,
+  outranksOrEquals,
+  tenantRoleSchema,
+  type InvitationDto,
+  type InviteMemberInput,
+  type InviteResult,
+  type MemberDto,
+  type TenantRole,
+} from '@repo/shared';
 import { randomUUID } from 'node:crypto';
 import { AuditService } from '../audit/audit.service.js';
 import { INVITATION_TTL_SECONDS } from '../auth/auth.js';
@@ -20,7 +29,7 @@ export class MembersService {
     private readonly mailer: InvitationMailer,
   ) {}
 
-  async list(ctx: TenantContext) {
+  async list(ctx: TenantContext): Promise<MemberDto[]> {
     const db = this.tenantPrisma.forTenant(ctx.tenantId);
     const members = await db.member.findMany({
       orderBy: { createdAt: 'asc' },
@@ -28,7 +37,7 @@ export class MembersService {
     });
     return members.map((m) => ({
       id: m.id,
-      role: m.role,
+      role: tenantRoleSchema.parse(m.role),
       joinedAt: m.createdAt.toISOString(),
       userId: m.user.id,
       name: m.user.name,
@@ -38,7 +47,7 @@ export class MembersService {
     }));
   }
 
-  async listInvitations(ctx: TenantContext) {
+  async listInvitations(ctx: TenantContext): Promise<InvitationDto[]> {
     const db = this.tenantPrisma.forTenant(ctx.tenantId);
     const rows = await db.invitation.findMany({
       where: { status: 'pending', expiresAt: { gt: new Date() } },
@@ -48,14 +57,14 @@ export class MembersService {
     return rows.map((i) => ({
       id: i.id,
       email: i.email,
-      role: i.role ?? 'agent',
+      role: tenantRoleSchema.parse(i.role ?? 'agent'),
       invitedBy: i.inviter.name,
       invitedAt: i.createdAt.toISOString(),
       expiresAt: i.expiresAt.toISOString(),
     }));
   }
 
-  async invite(ctx: TenantContext, input: InviteMemberInput) {
+  async invite(ctx: TenantContext, input: InviteMemberInput): Promise<InviteResult> {
     if (!outranksOrEquals(ctx.role, input.role)) throw new ForbiddenException(RANK_DENIED);
     const db = this.tenantPrisma.forTenant(ctx.tenantId);
     const token = createToken();
@@ -104,7 +113,7 @@ export class MembersService {
       inviterName: result.inviter.name,
       role: input.role,
     });
-    return { id: result.id, email: result.email, role: result.role, expiresAt: result.expiresAt.toISOString(), emailSent };
+    return { id: result.id, email: result.email, role: input.role, expiresAt: result.expiresAt.toISOString(), emailSent };
   }
 
   async revokeInvitation(ctx: TenantContext, invitationId: string) {

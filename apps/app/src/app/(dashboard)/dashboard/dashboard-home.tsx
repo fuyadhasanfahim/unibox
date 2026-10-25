@@ -11,6 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { useMounted } from "@/hooks/use-mounted";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { useActiveWorkspace } from "@/lib/workspaces";
 
 function greeting(hour: number) {
   if (hour < 5) return "Working late";
@@ -29,7 +30,7 @@ const STEPS = [
 export function DashboardHome() {
   const mounted = useMounted();
   const { data: session } = authClient.useSession();
-  const { data: orgs } = authClient.useListOrganizations();
+  const { workspace } = useActiveWorkspace();
   const firstName = session?.user.name.split(" ")[0];
   const done = STEPS.filter((s) => s.done).length;
 
@@ -46,9 +47,9 @@ export function DashboardHome() {
             <Skeleton className="h-9 w-72" />
           )}
           <p className="text-sm text-muted-foreground">
-            {orgs?.[0] ? (
+            {workspace ? (
               <>
-                Here&apos;s what&apos;s happening in <span className="font-medium text-foreground">{orgs[0].name}</span>.
+                Here&apos;s what&apos;s happening in <span className="font-medium text-foreground">{workspace.name}</span>.
               </>
             ) : (
               "Here's your Unibox overview."

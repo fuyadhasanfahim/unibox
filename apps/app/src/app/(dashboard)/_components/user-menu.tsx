@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, Keyboard, LifeBuoy, LogOut, Settings, ShieldCheck, UserRound, Users } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,6 +25,7 @@ import { cn, focusRing } from "@/lib/utils";
 
 export function UserMenu() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data, isPending } = authClient.useSession();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -38,6 +40,8 @@ export function UserMenu() {
       toast.error("Couldn't sign out. Try again.");
       return;
     }
+    // Drop every cached tenant query so the next person on this browser never sees this user's data.
+    queryClient.clear();
     router.replace("/sign-in");
     router.refresh();
   }

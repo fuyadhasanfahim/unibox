@@ -9,8 +9,8 @@ import type { ReactNode } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useMounted } from "@/hooks/use-mounted";
-import { authClient } from "@/lib/auth-client";
 import { cn, focusRing } from "@/lib/utils";
+import { useActiveWorkspace } from "@/lib/workspaces";
 import { useUi } from "@/stores/ui";
 import { NAV, type NavItem } from "./nav";
 
@@ -148,10 +148,8 @@ function SidebarFooter({ collapsed, showCollapse }: { collapsed: boolean; showCo
 }
 
 function WorkspaceChip({ collapsed }: { collapsed: boolean }) {
-  const { data: orgs } = authClient.useListOrganizations();
-  const { data: session } = authClient.useSession();
-  const org = orgs?.[0];
-  const name = org?.name ?? (session?.user.role === "super_admin" ? "Platform admin" : "No workspace");
+  const { workspace, data } = useActiveWorkspace();
+  const name = workspace?.name ?? (data?.platformRole === "super_admin" ? "Platform admin" : "No workspace");
   const initial = name.charAt(0).toUpperCase();
 
   return (
@@ -167,7 +165,7 @@ function WorkspaceChip({ collapsed }: { collapsed: boolean }) {
         </span>
         <Label collapsed={collapsed} className="grid">
           <span className="truncate text-sm font-semibold">{name}</span>
-          <span className="truncate text-[0.7rem] text-muted-foreground">{org ? "Workspace" : "Unibox"}</span>
+          <span className="truncate text-[0.7rem] capitalize text-muted-foreground">{workspace ? workspace.role : "Unibox"}</span>
         </Label>
       </div>
     </MaybeTooltip>

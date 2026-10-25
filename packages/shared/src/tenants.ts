@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { emailSchema } from "./auth.js";
-import { tenantRoleSchema, tenantStatusSchema } from "./rbac.js";
+import { tenantRoleSchema, tenantStatusSchema, type Permission, type TenantRole, type TenantStatus } from "./rbac.js";
 
 // Opaque ids from the database; validated for shape only (authorization comes from the guards).
 export const idSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, "Invalid id");
@@ -33,3 +33,40 @@ export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
 export type SetTenantStatusInput = z.infer<typeof setTenantStatusSchema>;
+
+// ---------------------------------------------------------------------------
+// Response contracts (API returns these shapes; the web app types its queries with them).
+// ---------------------------------------------------------------------------
+
+export type WorkspaceSummary = {
+  id: string;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  role: TenantRole;
+  permissions: Permission[];
+};
+
+export type MyWorkspaces = { platformRole: string; workspaces: WorkspaceSummary[] };
+
+export type MemberDto = {
+  id: string;
+  role: TenantRole;
+  joinedAt: string;
+  userId: string;
+  name: string;
+  email: string;
+  image: string | null;
+  isYou: boolean;
+};
+
+export type InvitationDto = {
+  id: string;
+  email: string;
+  role: TenantRole;
+  invitedBy: string;
+  invitedAt: string;
+  expiresAt: string;
+};
+
+export type InviteResult = { id: string; email: string; role: TenantRole; expiresAt: string; emailSent: boolean };

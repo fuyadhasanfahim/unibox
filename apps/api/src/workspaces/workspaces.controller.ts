@@ -5,7 +5,9 @@ import {
   memberParamsSchema,
   permissionsFor,
   tenantRoleSchema,
+  tenantStatusSchema,
   updateMemberRoleSchema,
+  type MyWorkspaces,
 } from '@repo/shared';
 import { createZodDto } from 'nestjs-zod';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -24,7 +26,7 @@ export class MeController {
 
   // The signed-in user's own memberships (not tenant-scoped: it lists across their tenants).
   @Get('workspaces')
-  async workspaces(@CurrentActor() actor: Actor) {
+  async workspaces(@CurrentActor() actor: Actor): Promise<MyWorkspaces> {
     const memberships = await this.prisma.member.findMany({
       where: { userId: actor.userId },
       orderBy: { createdAt: 'asc' },
@@ -34,7 +36,7 @@ export class MeController {
       platformRole: actor.role,
       workspaces: memberships.map((m) => {
         const role = tenantRoleSchema.parse(m.role);
-        return { ...m.organization, role, permissions: permissionsFor(role) };
+        return { ...m.organization, status: tenantStatusSchema.parse(m.organization.status), role, permissions: permissionsFor(role) };
       }),
     };
   }
