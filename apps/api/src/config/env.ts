@@ -25,6 +25,8 @@ export const envSchema = z
     // Public web origin. Auth runs behind the web app's /api proxy so cookies stay first-party.
     APP_URL: origin,
     BETTER_AUTH_SECRET: z.string().min(32, 'must be at least 32 characters'),
+    // Proves a request came through our web proxy, so its client-IP header can be trusted.
+    INTERNAL_PROXY_SECRET: z.string().min(32, 'must be at least 32 characters'),
     RESEND_API_KEY: optional(z.string().startsWith('re_', 'must be a Resend key (re_...)')),
     EMAIL_FROM: z.string().min(3).default('Unibox <onboarding@resend.dev>'),
     // Dev inbox (Mailpit). Takes priority over Resend so dev mail never reaches real addresses.

@@ -30,6 +30,20 @@ export function invitationEmail(p: { url: string; organizationName: string; invi
   };
 }
 
+export function addedToWorkspaceEmail(p: { url: string; organizationName: string; role: string }) {
+  const org = escape(p.organizationName);
+  return {
+    subject: `You now have access to ${p.organizationName} on Unibox`,
+    html: layout(
+      `Welcome to ${org}`,
+      `You were added to <strong style="color:#fafaf9">${org}</strong> as <strong style="color:#a3e635">${escape(p.role)}</strong>. Sign in with your existing Unibox account to open it.`,
+      { label: 'Open Unibox', url: p.url },
+      'Not expecting this? Contact the person who added you or Unibox support.',
+    ),
+    text: `You were added to ${p.organizationName} on Unibox as ${p.role}.\n\nSign in: ${p.url}`,
+  };
+}
+
 export function resetPasswordEmail(p: { url: string; name: string }) {
   return {
     subject: 'Reset your Unibox password',

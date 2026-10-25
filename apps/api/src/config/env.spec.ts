@@ -6,6 +6,7 @@ const valid = {
   CORS_ORIGINS: 'http://localhost:3000, https://app.example.com',
   APP_URL: 'http://localhost:3000',
   BETTER_AUTH_SECRET: 'x'.repeat(32),
+  INTERNAL_PROXY_SECRET: 'p'.repeat(32),
 };
 
 describe('validateEnv', () => {

@@ -1,15 +1,26 @@
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { organization } from 'better-auth/plugins';
+import { CLIENT_IP_HEADER } from '../common/client-ip.middleware.js';
 import type { Env } from '../config/env.js';
 import type { EmailService } from '../email/email.service.js';
-import { invitationEmail, resetPasswordEmail } from '../email/templates.js';
+import { resetPasswordEmail } from '../email/templates.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 import { hashPassword, verifyPassword } from './password.js';
-import { createToken } from './tokens.js';
 
 export const INVITATION_TTL_SECONDS = 48 * 60 * 60;
 const RESET_TTL_SECONDS = 30 * 60;
+
+// Read-only organization endpoints stay open (they check membership themselves).
+// Every mutation (invite, role change, remove, create, delete, accept) goes through our own
+// guarded /api/v1 endpoints, which enforce the role-rank and last-owner rules and write audit logs.
+const ALLOWED_ORGANIZATION_PATHS = new Set([
+  '/organization/list',
+  '/organization/get-full-organization',
+  '/organization/set-active',
+  '/organization/get-active-member',
+]);
 
 type Deps = {
   prisma: PrismaService;
@@ -57,11 +68,16 @@ export function createAuth({ prisma, email, env }: Deps) {
     advanced: {
       cookiePrefix: 'unibox',
       useSecureCookies: env.NODE_ENV === 'production',
+      // Only the header our web proxy sets (and the API verifies with a shared secret).
+      // x-forwarded-for is never trusted: clients can write it themselves.
+      ipAddress: { ipAddressHeaders: [CLIENT_IP_HEADER] },
     },
 
-    // ponytail: in-memory limiter is per API instance; switch storage to "database"/Redis when scaling out.
+    // Stored in Postgres so limits hold across API instances and restarts.
     rateLimit: {
       enabled: true,
+      storage: 'database',
+      modelName: 'rateLimit',
       window: 60,
       max: 100,
       customRules: {
@@ -71,11 +87,18 @@ export function createAuth({ prisma, email, env }: Deps) {
       },
     },
 
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path.startsWith('/organization/') && !ALLOWED_ORGANIZATION_PATHS.has(ctx.path)) {
+          throw new APIError('FORBIDDEN', { message: 'Use the workspace API for this action.' });
+        }
+      }),
+    },
+
     plugins: [
       organization({
         allowUserToCreateOrganization: false, // tenants are created by platform admins
         invitationExpiresIn: INVITATION_TTL_SECONDS,
-        cancelPendingInvitationsOnReInvite: true,
         schema: {
           organization: {
             additionalFields: {
@@ -84,21 +107,10 @@ export function createAuth({ prisma, email, env }: Deps) {
           },
           invitation: {
             additionalFields: {
+              // SHA-256 of our single-use email token; never returned to clients.
               tokenHash: { type: 'string', required: false, input: false, returned: false },
             },
           },
-        },
-        // Better Auth's invitation id is stored in plain text, so the email carries our own
-        // single-use token instead and only its hash is persisted.
-        sendInvitationEmail: async ({ id, email: to, role, organization: org, inviter }) => {
-          const token = createToken();
-          await prisma.invitation.update({ where: { id }, data: { tokenHash: token.hash } });
-          const url = `${env.APP_URL}/sign-up?invitation_token=${token.raw}`;
-          await email.send({
-            to,
-            ...invitationEmail({ url, organizationName: org.name, inviterName: inviter.user.name, role }),
-            devLink: url,
-          });
         },
       }),
     ],

@@ -65,6 +65,23 @@ Prottek suggestion, review ar code-e eigulo dhore nao:
 
 Decision change korte hole owner-er sathe aloch na kore korba na.
 
-## 6. Commands (project bootstrap-er por update korbo)
+## 6. Commands
 
-TODO: install, dev, test, lint, migrate command ekhane add hobe.
+| Kaj | Command |
+|---|---|
+| Install | `pnpm install` (api postinstall-e Prisma client generate hoy) |
+| Infra (Postgres, Redis, Mailpit) | `docker compose up -d` — Mailpit UI: http://localhost:8025 |
+| Dev (web :3000 + api :5000) | `pnpm dev` |
+| Type-check / lint | `pnpm check-types` / `pnpm lint` |
+| API unit / e2e test | `pnpm --filter @repo/api test` / `pnpm --filter @repo/api test:e2e` (docker infra lagbe) |
+| Migration banano (age review, tarpor apply) | `pnpm --filter @repo/api exec prisma migrate dev --name <name> --create-only` → SQL review → `pnpm --filter @repo/api db:migrate` |
+| Dev seed (demo tenants, owner/super accounts, invite link) | `pnpm --filter @repo/api db:seed` |
+
+### Tenancy / RBAC rules (code-e follow korte hobe)
+
+- Tenant route: `/api/v1/tenants/:tenantId/...` + `@RequirePermissions('<permission>')` (membership + permission guard). Role naam diye check na.
+- Role, permission, rank: `packages/shared/src/rbac.ts` (single source of truth). Notun permission oikhane add.
+- Tenant data: shudhu `TenantPrismaService.forTenant(ctx.tenantId)` diye. Notun tenant table hole `TENANT_MODELS`-e add.
+- Sensitive change: same transaction-e `AuditService.log(..., tx)`. `AuditLog` append-only (DB trigger).
+- Platform (super admin) route: `@PlatformAdmin()`. Tenant content dekhabe na, shudhu metadata.
+- Better Auth-er `/organization/*` mutation endpoint blocked; member/invite/role kaj amader guarded endpoint diye.

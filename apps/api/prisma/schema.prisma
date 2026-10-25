@@ -127,3 +127,27 @@ model Invitation {
 
   @@index([organizationId, email, status])
 }
+
+// Better Auth rate limiter (storage: "database") so every API instance shares one count.
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+// Append-only security/audit trail. UPDATE and DELETE are rejected by a DB trigger (see migration).
+model AuditLog {
+  id           String   @id
+  tenantId     String?
+  actorUserId  String?
+  action       String
+  resourceType String
+  resourceId   String?
+  requestId    String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([actorUserId, createdAt])
+}

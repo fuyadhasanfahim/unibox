@@ -50,9 +50,12 @@ export class ErrorEnvelopeFilter implements ExceptionFilter {
       }
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
-      code = CODES[status] ?? 'HTTP_ERROR';
+      // `throw new ForbiddenException({ code: 'TENANT_SUSPENDED', message })` sets a specific code.
+      const response = exception.getResponse();
+      const custom = typeof response === 'object' && response !== null ? (response as { code?: unknown; message?: unknown }) : {};
+      code = typeof custom.code === 'string' ? custom.code : (CODES[status] ?? 'HTTP_ERROR');
       // Only expose the message for client errors; 5xx stays generic.
-      if (status < 500) message = exception.message;
+      if (status < 500) message = typeof custom.message === 'string' ? custom.message : exception.message;
     }
 
     if (status >= 500) {

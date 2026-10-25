@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { AcceptInvitationInput, InvitationPreview } from '@repo/shared';
 import { randomUUID } from 'node:crypto';
+import { AuditService } from '../audit/audit.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { hashPassword } from './password.js';
 import { hashToken } from './tokens.js';
@@ -11,7 +12,10 @@ const BLOCKED_ORG_STATUSES = ['suspended', 'closed'];
 
 @Injectable()
 export class InvitesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private usableWhere(tokenHash: string) {
     return {
@@ -38,7 +42,7 @@ export class InvitesService {
     return {
       email: invitation.email,
       organizationName: invitation.organization.name,
-      role: invitation.role ?? 'member',
+      role: invitation.role ?? 'agent',
       inviterName: invitation.inviter.name,
       expiresAt: invitation.expiresAt.toISOString(),
     };
@@ -75,9 +79,21 @@ export class InvitesService {
       await tx.account.create({
         data: { id: randomUUID(), userId, accountId: userId, providerId: 'credential', password: passwordHash },
       });
+      const memberId = randomUUID();
       await tx.member.create({
-        data: { id: randomUUID(), organizationId: invitation.organizationId, userId, role: invitation.role ?? 'member' },
+        data: { id: memberId, organizationId: invitation.organizationId, userId, role: invitation.role ?? 'agent' },
       });
+      await this.audit.log(
+        {
+          tenantId: invitation.organizationId,
+          actorUserId: userId,
+          action: 'member.joined',
+          resourceType: 'member',
+          resourceId: memberId,
+          metadata: { role: invitation.role ?? 'agent', invitationId: invitation.id },
+        },
+        tx,
+      );
 
       return { email: invitation.email };
     });

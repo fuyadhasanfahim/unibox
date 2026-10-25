@@ -91,7 +91,7 @@ async function main() {
       id: randomUUID(),
       organizationId: demo.id,
       email: INVITE_EMAIL,
-      role: 'member',
+      role: 'agent',
       status: 'pending',
       expiresAt: new Date(Date.now() + INVITATION_TTL_SECONDS * 1000),
       inviterId: fuyad.id,

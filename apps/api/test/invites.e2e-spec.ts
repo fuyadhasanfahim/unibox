@@ -24,7 +24,7 @@ describe('Invite-only sign-up (e2e)', () => {
         id: randomUUID(),
         organizationId: orgId,
         email,
-        role: 'member',
+        role: 'agent',
         status: overrides.status ?? 'pending',
         expiresAt: overrides.expiresAt ?? new Date(Date.now() + 3_600_000),
         inviterId: ownerId,
@@ -57,7 +57,7 @@ describe('Invite-only sign-up (e2e)', () => {
   it('previews a valid invite without leaking internals', async () => {
     const token = await invite(`preview-${run}@test.local`);
     const res = await request(app.getHttpServer()).get('/api/v1/invites/lookup').query({ token }).expect(200);
-    expect(res.body).toMatchObject({ email: `preview-${run}@test.local`, organizationName: 'Test Org', role: 'member' });
+    expect(res.body).toMatchObject({ email: `preview-${run}@test.local`, organizationName: 'Test Org', role: 'agent' });
     expect(res.body).not.toHaveProperty('tokenHash');
   });
 
@@ -75,7 +75,8 @@ describe('Invite-only sign-up (e2e)', () => {
     });
     expect(user.emailVerified).toBe(true);
     expect(user.accounts[0]?.password).toMatch(/^\$argon2id\$/);
-    expect(user.members).toEqual([expect.objectContaining({ organizationId: orgId, role: 'member' })]);
+    expect(user.members).toEqual([expect.objectContaining({ organizationId: orgId, role: 'agent' })]);
+    await prisma.auditLog.findFirstOrThrow({ where: { tenantId: orgId, action: 'member.joined', actorUserId: user.id } });
   });
 
   it('rejects expired and revoked invitations with the same message (T-03)', async () => {
