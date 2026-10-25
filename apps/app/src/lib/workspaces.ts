@@ -1,10 +1,12 @@
 "use client";
 
 import type {
+  AcceptInvitationResult,
   InvitationDto,
   InviteMemberInput,
   InviteResult,
   MemberDto,
+  MyInvitationDto,
   MyWorkspaces,
   Permission,
   TenantRole,
@@ -12,9 +14,11 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMounted } from "@/hooks/use-mounted";
 import { api } from "./api";
+import { authClient } from "./auth-client";
 
 export const workspaceKeys = {
   mine: ["me", "workspaces"] as const,
+  myInvitations: ["me", "invitations"] as const,
   members: (tenantId: string) => ["tenants", tenantId, "members"] as const,
   invitations: (tenantId: string) => ["tenants", tenantId, "invitations"] as const,
 };
@@ -23,23 +27,65 @@ export function useMyWorkspaces() {
   return useQuery({ queryKey: workspaceKeys.mine, queryFn: () => api<MyWorkspaces>("/me/workspaces") });
 }
 
-// Until the workspace switcher lands, the active workspace is the user's first one.
-// Reports "pending" until after hydration: another component (the sidebar) may already have
-// fetched this query, and rendering that data during hydration would not match the server HTML.
+// Active workspace = the session's activeOrganizationId (server-side, set via setActive), falling
+// back to the first active membership. Reports "pending" until after hydration: another component
+// may already have this query cached, and rendering it during hydration would not match the HTML.
 export function useActiveWorkspace() {
   const mounted = useMounted();
   const query = useMyWorkspaces();
+  const session = authClient.useSession();
   const data = mounted ? query.data : undefined;
-  const workspace = data?.workspaces[0];
+  const activeId = session.data?.session.activeOrganizationId;
+  const usable = data?.workspaces.filter((w) => w.status === "active") ?? [];
+  const workspace = usable.find((w) => w.id === activeId) ?? usable[0];
   const permissions = new Set<Permission>(workspace?.permissions ?? []);
   return {
     data,
     error: query.error,
-    isPending: !mounted || query.isPending,
+    isPending: !mounted || query.isPending || session.isPending,
     workspace,
     // UI hint only: the API enforces every permission again.
     can: (permission: Permission) => permissions.has(permission),
   };
+}
+
+export function useSwitchWorkspace() {
+  const qc = useQueryClient();
+  const session = authClient.useSession();
+  return useMutation({
+    mutationFn: async (workspaceId: string) => {
+      // Better Auth checks membership before storing it on the session.
+      const { error } = await authClient.organization.setActive({ organizationId: workspaceId });
+      if (error) throw new Error(error.message ?? "Couldn't switch workspace.");
+    },
+    onSuccess: async () => {
+      await session.refetch();
+      await qc.invalidateQueries();
+    },
+  });
+}
+
+export function useMyInvitations() {
+  return useQuery({ queryKey: workspaceKeys.myInvitations, queryFn: () => api<MyInvitationDto[]>("/me/invitations") });
+}
+
+export function useAcceptMyInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) => api<AcceptInvitationResult>(`/me/invitations/${invitationId}/accept`, { method: "POST" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: workspaceKeys.myInvitations });
+      void qc.invalidateQueries({ queryKey: workspaceKeys.mine });
+    },
+  });
+}
+
+export function useDeclineMyInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) => api<void>(`/me/invitations/${invitationId}/decline`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.myInvitations }),
+  });
 }
 
 export function useMembers(tenantId: string | undefined, enabled = true) {

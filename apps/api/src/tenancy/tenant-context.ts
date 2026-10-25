@@ -27,11 +27,20 @@ export const Tenant = createParamDecorator((_: unknown, ctx: ExecutionContext): 
 });
 
 // Signed-in user + request id for non-tenant routes (platform admin, /me).
-export type Actor = { userId: string; role: string; requestId: string };
+export type Actor = { userId: string; email: string; emailVerified: boolean; role: string; requestId: string };
 
 export const CurrentActor = createParamDecorator((_: unknown, ctx: ExecutionContext): Actor => {
   const req = ctx.switchToHttp().getRequest<AppRequest>();
-  const user = req.session?.user as ({ id: string; role?: string } & Record<string, unknown>) | undefined;
+  const user = req.session?.user as
+    | ({ id: string; email: string; emailVerified: boolean; role?: string } & Record<string, unknown>)
+    | undefined;
   if (!user) throw new Error('No session: this route must not be @AllowAnonymous');
-  return { userId: user.id, role: user.role ?? 'user', requestId: req.id };
+  return {
+    userId: user.id,
+    // Better Auth stores emails lowercased; normalize anyway since invitations match on it.
+    email: user.email.toLowerCase(),
+    emailVerified: user.emailVerified === true,
+    role: user.role ?? 'user',
+    requestId: req.id,
+  };
 });

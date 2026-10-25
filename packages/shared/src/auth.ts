@@ -42,6 +42,8 @@ export const invitationPreviewSchema = z.object({
   role: z.string(),
   inviterName: z.string(),
   expiresAt: z.string(),
+  // True when the invited email already has a Unibox account: the page then offers "sign in to accept".
+  accountExists: z.boolean(),
 });
 
 export const forgotPasswordSchema = z.strictObject({ email: emailSchema });

@@ -24,7 +24,11 @@ export function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   const notice = NOTICES[params.get("notice") ?? ""];
-  const [email, setEmail] = useState("");
+  // Prefilled when arriving from an invitation ("sign in to accept"); only a well-formed email is used.
+  const [email, setEmail] = useState(() => {
+    const fromLink = params.get("email") ?? "";
+    return signInSchema.shape.email.safeParse(fromLink).success ? fromLink : "";
+  });
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string>();

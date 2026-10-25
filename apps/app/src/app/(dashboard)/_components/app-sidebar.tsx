@@ -1,16 +1,25 @@
 "use client";
 
-import { Monitor, Moon, PanelLeftClose, PanelLeftOpen, Sparkles, Sun } from "lucide-react";
+import { Check, ChevronsUpDown, MailOpen, Monitor, Moon, PanelLeftClose, PanelLeftOpen, Sparkles, Sun } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import type { ReactNode } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/components/ui/toaster";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useMounted } from "@/hooks/use-mounted";
 import { cn, focusRing } from "@/lib/utils";
-import { useActiveWorkspace } from "@/lib/workspaces";
+import { useActiveWorkspace, useMyInvitations, useSwitchWorkspace } from "@/lib/workspaces";
 import { useUi } from "@/stores/ui";
 import { NAV, type NavItem } from "./nav";
 
@@ -147,28 +156,96 @@ function SidebarFooter({ collapsed, showCollapse }: { collapsed: boolean; showCo
   );
 }
 
-function WorkspaceChip({ collapsed }: { collapsed: boolean }) {
+function WorkspaceInitial({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary/50 to-chart-5/40 text-xs font-bold text-foreground",
+        className,
+      )}
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+// Active workspace lives on the session (server-side); switching calls Better Auth's setActive,
+// which re-checks membership. Every tenant query is keyed by workspace id, so nothing leaks across.
+function WorkspaceSwitcher({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const router = useRouter();
   const { workspace, data } = useActiveWorkspace();
+  const { data: invitations } = useMyInvitations();
+  const switchTo = useSwitchWorkspace();
   const name = workspace?.name ?? (data?.platformRole === "super_admin" ? "Platform admin" : "No workspace");
-  const initial = name.charAt(0).toUpperCase();
+  const pending = invitations?.length ?? 0;
 
   return (
-    <MaybeTooltip show={collapsed} label={name}>
-      <div
-        className={cn(
-          "mx-2.5 flex items-center gap-2.5 rounded-xl border border-border bg-foreground/[0.03] p-2",
-          collapsed && "mx-auto size-10 justify-center p-0",
-        )}
-      >
-        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary/50 to-chart-5/40 text-xs font-bold text-foreground">
-          {initial}
-        </span>
-        <Label collapsed={collapsed} className="grid">
-          <span className="truncate text-sm font-semibold">{name}</span>
-          <span className="truncate text-[0.7rem] capitalize text-muted-foreground">{workspace ? workspace.role : "Unibox"}</span>
-        </Label>
-      </div>
-    </MaybeTooltip>
+    <DropdownMenu>
+      <MaybeTooltip show={collapsed} label={name}>
+        <DropdownMenuTrigger
+          className={cn(
+            "group relative mx-2.5 flex items-center gap-2.5 rounded-xl border border-border bg-foreground/[0.03] p-2 text-left transition-colors",
+            "hover:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.06]",
+            collapsed && "mx-auto size-10 justify-center p-0",
+            focusRing,
+          )}
+          aria-label={`Workspace: ${name}. Switch workspace`}
+        >
+          <WorkspaceInitial name={name} />
+          <Label collapsed={collapsed} className="grid min-w-0 flex-1">
+            <span className="truncate text-sm font-semibold">{name}</span>
+            <span className="truncate text-[0.7rem] capitalize text-muted-foreground">{workspace ? workspace.role : "Unibox"}</span>
+          </Label>
+          {!collapsed && <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />}
+          {pending > 0 && (
+            <span
+              aria-label={`${pending} pending invitation${pending === 1 ? "" : "s"}`}
+              className={cn("absolute size-2 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]", collapsed ? "-right-0.5 -top-0.5" : "right-2 top-2")}
+            />
+          )}
+        </DropdownMenuTrigger>
+      </MaybeTooltip>
+      <DropdownMenuContent align="start" side={collapsed ? "right" : "bottom"} className="w-64">
+        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        {data?.workspaces.map((w) => {
+          const active = w.id === workspace?.id;
+          const usable = w.status === "active";
+          return (
+            <DropdownMenuItem
+              key={w.id}
+              disabled={!usable || switchTo.isPending}
+              onSelect={() => {
+                if (active) return;
+                switchTo.mutate(w.id, {
+                  onSuccess: () => {
+                    toast.success(`Switched to ${w.name}`);
+                    onNavigate?.();
+                    router.push("/dashboard");
+                  },
+                  onError: (e) => toast.error(e.message),
+                });
+              }}
+            >
+              <WorkspaceInitial name={w.name} className="size-6 rounded-md text-[0.65rem]" />
+              <span className="grid min-w-0 flex-1">
+                <span className="truncate font-medium text-foreground">{w.name}</span>
+                <span className="text-xs capitalize text-muted-foreground">{usable ? w.role : w.status}</span>
+              </span>
+              {active && <Check className="text-primary-text!" />}
+            </DropdownMenuItem>
+          );
+        })}
+        {data && data.workspaces.length === 0 && <p className="px-2.5 py-2 text-sm text-muted-foreground">You&apos;re not in any workspace yet.</p>}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/invitations" onClick={onNavigate}>
+            <MailOpen />
+            Invitations
+            {pending > 0 && <span className="ml-auto rounded-full bg-primary px-1.5 font-mono text-[0.7rem] font-semibold text-primary-foreground">{pending}</span>}
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -197,7 +274,7 @@ export function SidebarBody({
         <Label collapsed={collapsed}>unibox</Label>
       </Link>
 
-      <WorkspaceChip collapsed={collapsed} />
+      <WorkspaceSwitcher collapsed={collapsed} onNavigate={onNavigate} />
 
       <ScrollArea className="mt-3 min-h-0 flex-1">
         <nav aria-label="Main" className="grid gap-5 px-2.5 pb-4">

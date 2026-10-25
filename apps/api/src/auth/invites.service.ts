@@ -45,6 +45,8 @@ export class InvitesService {
       role: invitation.role ?? 'agent',
       inviterName: invitation.inviter.name,
       expiresAt: invitation.expiresAt.toISOString(),
+      // Shown only to the holder of the invite token (sent to that very address).
+      accountExists: Boolean(await this.prisma.user.findUnique({ where: { email: invitation.email }, select: { id: true } })),
     };
   }
 

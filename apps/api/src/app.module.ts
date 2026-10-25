@@ -21,6 +21,7 @@ import { PlatformTenantsController } from './platform/platform-tenants.controlle
 import { PlatformTenantsService } from './platform/platform-tenants.service.js';
 import { InvitationMailer } from './workspaces/invitation-mailer.js';
 import { MembersService } from './workspaces/members.service.js';
+import { MyInvitationsService } from './workspaces/my-invitations.service.js';
 import { MeController, WorkspaceMembersController } from './workspaces/workspaces.controller.js';
 
 @Module({
@@ -54,6 +55,7 @@ import { MeController, WorkspaceMembersController } from './workspaces/workspace
     AuditService,
     InvitationMailer,
     MembersService,
+    MyInvitationsService,
     PlatformTenantsService,
     { provide: APP_PIPE, useClass: ZodValidationPipe },
     { provide: APP_FILTER, useClass: ErrorEnvelopeFilter },

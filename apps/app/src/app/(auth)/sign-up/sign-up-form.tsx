@@ -2,7 +2,7 @@
 
 import { acceptInvitationSchema, invitationTokenSchema, type InvitationPreview } from "@repo/shared";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ArrowRight, Lock, MailX, UserPlus } from "lucide-react";
+import { ArrowRight, LogIn, Lock, MailX, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -76,12 +76,52 @@ export function SignUpForm() {
     );
   }
 
+  if (state.invite.accountExists) return <ExistingAccount invite={state.invite} />;
+
   return (
     <AcceptForm
       token={token}
       invite={state.invite}
       onDone={(signedIn) => router.replace(signedIn ? "/dashboard" : "/sign-in?notice=joined")}
     />
+  );
+}
+
+// The invited email already has an account: no new password, they sign in and accept from
+// /invitations (which only shows invitations for the signed-in user's own email).
+function ExistingAccount({ invite }: { invite: InvitationPreview }) {
+  const next = `/sign-in?next=${encodeURIComponent("/invitations")}&email=${encodeURIComponent(invite.email)}`;
+  return (
+    <div className="grid gap-6">
+      <AuthHeader
+        title="You already have an account"
+        description={
+          <>
+            Sign in as <span className="font-medium text-foreground">{invite.email}</span> to join{" "}
+            <span className="font-medium text-foreground">{invite.organizationName}</span>.
+          </>
+        }
+      />
+      <div className="glass flex items-center gap-3 rounded-xl p-3.5">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary-text ring-1 ring-primary/20">
+          <UserPlus className="size-4" />
+        </span>
+        <div className="grid min-w-0 gap-0.5 text-sm">
+          <span className="truncate font-semibold">{invite.organizationName}</span>
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            Invited by {invite.inviterName}
+            <Badge variant="lime" className="capitalize">
+              {invite.role}
+            </Badge>
+          </span>
+        </div>
+      </div>
+      <Link href={next} className={buttonVariants({ size: "lg", className: "w-full" })}>
+        <LogIn />
+        Sign in to accept
+      </Link>
+      <AuthFooter>Use the same email address the invitation was sent to.</AuthFooter>
+    </div>
   );
 }
 

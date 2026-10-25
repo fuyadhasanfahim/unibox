@@ -3,6 +3,7 @@ import {
   invitationParamsSchema,
   inviteMemberSchema,
   memberParamsSchema,
+  myInvitationParamsSchema,
   permissionsFor,
   tenantRoleSchema,
   tenantStatusSchema,
@@ -14,15 +15,38 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { RequirePermissions } from '../tenancy/guards.js';
 import { CurrentActor, Tenant, type Actor, type TenantContext } from '../tenancy/tenant-context.js';
 import { MembersService } from './members.service.js';
+import { MyInvitationsService } from './my-invitations.service.js';
 
 class InviteMemberDto extends createZodDto(inviteMemberSchema) {}
 class UpdateMemberRoleDto extends createZodDto(updateMemberRoleSchema) {}
 class MemberParams extends createZodDto(memberParamsSchema) {}
 class InvitationParams extends createZodDto(invitationParamsSchema) {}
+class MyInvitationParams extends createZodDto(myInvitationParamsSchema) {}
 
 @Controller('me')
 export class MeController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly invitations: MyInvitationsService,
+  ) {}
+
+  // Invitations addressed to the signed-in user's own email (existing-account flow).
+  @Get('invitations')
+  myInvitations(@CurrentActor() actor: Actor) {
+    return this.invitations.list(actor);
+  }
+
+  @Post('invitations/:invitationId/accept')
+  @HttpCode(200)
+  accept(@CurrentActor() actor: Actor, @Param() params: MyInvitationParams) {
+    return this.invitations.accept(actor, params.invitationId);
+  }
+
+  @Post('invitations/:invitationId/decline')
+  @HttpCode(204)
+  decline(@CurrentActor() actor: Actor, @Param() params: MyInvitationParams) {
+    return this.invitations.decline(actor, params.invitationId);
+  }
 
   // The signed-in user's own memberships (not tenant-scoped: it lists across their tenants).
   @Get('workspaces')

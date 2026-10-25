@@ -8,6 +8,7 @@ export const idSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/, "Inv
 export const tenantParamsSchema = z.strictObject({ tenantId: idSchema });
 export const memberParamsSchema = z.strictObject({ tenantId: idSchema, memberId: idSchema });
 export const invitationParamsSchema = z.strictObject({ tenantId: idSchema, invitationId: idSchema });
+export const myInvitationParamsSchema = z.strictObject({ invitationId: idSchema });
 
 export const inviteMemberSchema = z.strictObject({
   email: emailSchema,
@@ -70,3 +71,15 @@ export type InvitationDto = {
 };
 
 export type InviteResult = { id: string; email: string; role: TenantRole; expiresAt: string; emailSent: boolean };
+
+// Pending invitations addressed to the signed-in user's own email.
+export type MyInvitationDto = {
+  id: string;
+  workspaceId: string;
+  workspaceName: string;
+  role: TenantRole;
+  invitedBy: string;
+  expiresAt: string;
+};
+
+export type AcceptInvitationResult = { workspaceId: string; workspaceName: string; role: TenantRole };

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarClock, Check, MessagesSquare, Plug, Timer, UserPlus, Users } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, MailOpen, MessagesSquare, Plug, Timer, UserPlus, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { useMounted } from "@/hooks/use-mounted";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { useActiveWorkspace } from "@/lib/workspaces";
+import { useActiveWorkspace, useMyInvitations } from "@/lib/workspaces";
 
 function greeting(hour: number) {
   if (hour < 5) return "Working late";
@@ -31,6 +31,8 @@ export function DashboardHome() {
   const mounted = useMounted();
   const { data: session } = authClient.useSession();
   const { workspace } = useActiveWorkspace();
+  const { data: invitations } = useMyInvitations();
+  const pendingInvites = mounted ? (invitations?.length ?? 0) : 0;
   const firstName = session?.user.name.split(" ")[0];
   const done = STEPS.filter((s) => s.done).length;
 
@@ -58,6 +60,26 @@ export function DashboardHome() {
         </div>
         <Badge variant="outline">No channels connected yet</Badge>
       </div>
+
+      {pendingInvites > 0 && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
+          <Link
+            href="/invitations"
+            className="glass flex items-center gap-3 rounded-2xl p-4 transition-colors hover:bg-primary-soft"
+          >
+            <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground">
+              <MailOpen className="size-4" />
+            </span>
+            <span className="grid flex-1">
+              <span className="font-semibold">
+                You have {pendingInvites} pending workspace invitation{pendingInvites === 1 ? "" : "s"}
+              </span>
+              <span className="text-sm text-muted-foreground">Review and join from your invitations.</span>
+            </span>
+            <ArrowRight className="size-4 text-primary-text" />
+          </Link>
+        </motion.div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Open conversations" value={0} icon={MessagesSquare} />

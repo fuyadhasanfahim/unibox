@@ -52,5 +52,6 @@ export const config = {
     "/channels/:path*",
     "/team/:path*",
     "/settings/:path*",
+    "/invitations/:path*",
   ],
 };

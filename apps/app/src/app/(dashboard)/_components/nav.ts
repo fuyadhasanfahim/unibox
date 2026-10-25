@@ -2,6 +2,7 @@ import {
   CalendarClock,
   Inbox,
   LayoutDashboard,
+  MailOpen,
   Plug,
   Settings,
   Users,
@@ -33,6 +34,11 @@ export const NAV: { label: string; items: NavItem[] }[] = [
 
 export const ALL_NAV = NAV.flatMap((g) => g.items);
 
+// Pages reachable from menus rather than the sidebar; listed so the header and search know them.
+export const SECONDARY_NAV: NavItem[] = [
+  { href: "/invitations", label: "Invitations", icon: MailOpen, description: "Workspaces that invited you" },
+];
+
 export function navForPath(pathname: string): NavItem | undefined {
-  return ALL_NAV.find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
+  return [...ALL_NAV, ...SECONDARY_NAV].find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
 }

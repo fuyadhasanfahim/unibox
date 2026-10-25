@@ -22,7 +22,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { cn, focusRing } from "@/lib/utils";
 import { useUi } from "@/stores/ui";
 import { SidebarBody } from "./app-sidebar";
-import { NAV, navForPath } from "./nav";
+import { NAV, navForPath, SECONDARY_NAV } from "./nav";
 import { UserMenu } from "./user-menu";
 
 function SearchCommand() {
@@ -80,6 +80,15 @@ function SearchCommand() {
               ))}
             </CommandGroup>
           ))}
+          <CommandGroup heading="Account">
+            {SECONDARY_NAV.map((item) => (
+              <CommandItem key={item.href} value={`${item.label} ${item.description}`} onSelect={() => run(() => router.push(item.href))}>
+                <item.icon />
+                {item.label}
+                <span className="ml-auto truncate text-xs text-muted-foreground">{item.description}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
           <CommandSeparator />
           <CommandGroup heading="Theme">
             <CommandItem onSelect={() => run(() => setTheme("light"))}>
