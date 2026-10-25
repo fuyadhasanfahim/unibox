@@ -46,7 +46,8 @@ import { MeController, WorkspaceMembersController } from './workspaces/workspace
             NODE_ENV: config.get('NODE_ENV', { infer: true }),
           },
         }),
-        bodyParser: { json: { limit: '1mb' }, urlencoded: { limit: '1mb', extended: false } },
+        // rawBody keeps the exact bytes on req.rawBody: webhook signatures are computed over them.
+        bodyParser: { json: { limit: '1mb' }, urlencoded: { limit: '1mb', extended: false }, rawBody: true },
       }),
     }),
     QueueModule,

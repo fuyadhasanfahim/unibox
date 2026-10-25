@@ -46,6 +46,59 @@ services:
             interval: 5s
             timeout: 3s
             retries: 10
+    # Full app in containers: docker compose --profile app up -d --build
+    # Stop `pnpm dev` first (same ports). Runs the API in development mode so Mailpit and plain-http cookies work.
+    api:
+        profiles: ["app"]
+        build:
+            context: .
+            dockerfile: apps/api/Dockerfile
+        container_name: unibox-api
+        restart: unless-stopped
+        env_file: .env
+        environment:
+            NODE_ENV: development
+            API_PORT: 5000
+            DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+            REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+            MAILPIT_URL: http://mailpit:8025
+            # Public web origin (PUBLIC_APP_URL in .env), e.g. the Cloudflare tunnel hostname.
+            APP_URL: ${PUBLIC_APP_URL:-http://localhost:3000}
+            CORS_ORIGINS: ${PUBLIC_APP_URL:-http://localhost:3000},http://localhost:3000
+        command: ["sh", "-c", "pnpm --filter @repo/api exec prisma migrate deploy && node apps/api/dist/main.js"]
+        ports:
+            - "127.0.0.1:5000:5000"
+        depends_on:
+            db: { condition: service_healthy }
+            redis: { condition: service_healthy }
+            mailpit: { condition: service_healthy }
+        healthcheck:
+            test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:5000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+            start_period: 30s
+    web:
+        profiles: ["app"]
+        build:
+            context: .
+            dockerfile: apps/app/Dockerfile
+            # Baked into the Next build: the API rewrite target and the public URL.
+            args:
+                API_URL: http://api:5000
+                NEXT_PUBLIC_APP_URL: ${PUBLIC_APP_URL:-http://localhost:3000}
+        container_name: unibox-web
+        restart: unless-stopped
+        env_file: .env
+        environment:
+            API_URL: http://api:5000
+            PORT: 3000
+            # Nothing sets it locally, so the client IP falls back to 127.0.0.1.
+            TRUSTED_CLIENT_IP_HEADER: x-real-ip
+        ports:
+            - "127.0.0.1:3000:3000"
+        depends_on:
+            api: { condition: service_healthy }
 volumes:
     unibox-pgdata:
     unibox-redisdata:

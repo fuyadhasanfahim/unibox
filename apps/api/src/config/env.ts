@@ -50,8 +50,11 @@ export const envSchema = z
     META_APP_ID: optional(z.string().regex(/^\d+$/, 'must be a numeric Meta app id')),
     META_APP_SECRET: optional(z.string().min(16)),
     META_WEBHOOK_VERIFY_TOKEN: optional(z.string().min(16)),
+    // Instagram API with Instagram login uses its own app id and secret (shown under the Instagram use case).
+    INSTAGRAM_APP_ID: optional(z.string().regex(/^\d+$/, 'must be a numeric Instagram app id')),
+    INSTAGRAM_APP_SECRET: optional(z.string().min(16)),
     // Pinned Graph API version; bump deliberately after reading Meta's changelog.
-    META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/, 'must look like v23.0').default('v23.0'),
+    META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/, 'must look like v26.0').default('v26.0'),
   })
   .superRefine((env, ctx) => {
     // Dev may log email links instead of sending; production must really send them.
@@ -62,6 +65,9 @@ export const envSchema = z
     // All three or none: a half-configured Meta app would fail at the first webhook instead of at boot.
     if (meta.some(Boolean) && !meta.every(Boolean)) {
       ctx.addIssue({ code: 'custom', path: ['META_APP_ID'], message: 'META_APP_ID, META_APP_SECRET and META_WEBHOOK_VERIFY_TOKEN must be set together' });
+    }
+    if (Boolean(env.INSTAGRAM_APP_ID) !== Boolean(env.INSTAGRAM_APP_SECRET)) {
+      ctx.addIssue({ code: 'custom', path: ['INSTAGRAM_APP_ID'], message: 'INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET must be set together' });
     }
     if (env.NODE_ENV === 'production' && env.MAILPIT_URL) {
       ctx.addIssue({ code: 'custom', path: ['MAILPIT_URL'], message: 'must not be set in production' });

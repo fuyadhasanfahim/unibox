@@ -43,7 +43,7 @@ describe('validateEnv', () => {
   });
 
   it('needs the Meta app settings all together or not at all', () => {
-    expect(validateEnv(valid).META_GRAPH_VERSION).toBe('v23.0');
+    expect(validateEnv(valid).META_GRAPH_VERSION).toBe('v26.0');
     expect(() => validateEnv({ ...valid, META_APP_ID: '123456' })).toThrow(/must be set together/);
     const meta = { META_APP_ID: '123456', META_APP_SECRET: 's'.repeat(32), META_WEBHOOK_VERIFY_TOKEN: 'v'.repeat(24) };
     expect(validateEnv({ ...valid, ...meta }).META_APP_ID).toBe('123456');
