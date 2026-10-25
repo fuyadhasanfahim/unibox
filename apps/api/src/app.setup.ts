@@ -1,0 +1,20 @@
+import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
+import type { Env } from './config/env.js';
+
+// Shared by main.ts and e2e tests so tests hit the same prefix, headers and CORS as production.
+export function setupApp(app: INestApplication) {
+  const config = app.get<ConfigService<Env, true>>(ConfigService);
+
+  app.use(helmet());
+  app.enableCors({
+    origin: config.get('CORS_ORIGINS', { infer: true }),
+    credentials: true,
+    exposedHeaders: ['x-request-id'],
+  });
+  app.setGlobalPrefix('api/v1', { exclude: ['health/live', 'health/ready'] });
+  app.enableShutdownHooks();
+
+  return config;
+}

@@ -4,6 +4,8 @@ const valid = {
   DATABASE_URL: 'postgresql://u:SECRET-PW@127.0.0.1:5432/db',
   REDIS_URL: 'redis://:SECRET-PW@127.0.0.1:6379',
   CORS_ORIGINS: 'http://localhost:3000, https://app.example.com',
+  APP_URL: 'http://localhost:3000',
+  BETTER_AUTH_SECRET: 'x'.repeat(32),
 };
 
 describe('validateEnv', () => {
@@ -22,6 +24,15 @@ describe('validateEnv', () => {
   it('rejects wildcard and path-bearing CORS origins', () => {
     expect(() => validateEnv({ ...valid, CORS_ORIGINS: '*' })).toThrow(/CORS_ORIGINS/);
     expect(() => validateEnv({ ...valid, CORS_ORIGINS: 'http://localhost:3000/' })).toThrow(/CORS_ORIGINS/);
+  });
+
+  it('treats an empty RESEND_API_KEY as unset in dev but requires it in production', () => {
+    expect(validateEnv({ ...valid, RESEND_API_KEY: '' }).RESEND_API_KEY).toBeUndefined();
+    expect(() => validateEnv({ ...valid, NODE_ENV: 'production' })).toThrow(/RESEND_API_KEY: is required in production/);
+  });
+
+  it('rejects a short auth secret', () => {
+    expect(() => validateEnv({ ...valid, BETTER_AUTH_SECRET: 'short' })).toThrow(/BETTER_AUTH_SECRET/);
   });
 
   it('never puts values (secrets) in the error message', () => {

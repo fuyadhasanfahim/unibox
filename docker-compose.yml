@@ -32,6 +32,20 @@ services:
             retries: 10
         environment:
             REDIS_PASSWORD: ${REDIS_PASSWORD}
+    mailpit:
+        image: axllent/mailpit:v1.27
+        container_name: unibox-mailpit
+        restart: unless-stopped
+        environment:
+            MP_MAX_MESSAGES: 500
+        ports:
+            # Web UI + HTTP API (localhost only). Dev inbox: nothing here ever leaves the machine.
+            - "127.0.0.1:${MAILPIT_PORT:-8025}:8025"
+        healthcheck:
+            test: ["CMD", "/mailpit", "readyz"]
+            interval: 5s
+            timeout: 3s
+            retries: 10
 volumes:
     unibox-pgdata:
     unibox-redisdata:

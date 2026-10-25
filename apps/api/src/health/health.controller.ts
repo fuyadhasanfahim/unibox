@@ -1,6 +1,8 @@
 import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { PrismaService } from '../prisma/prisma.service.js';
 
+@AllowAnonymous()
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}

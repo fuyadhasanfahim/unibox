@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
+import { setupApp } from './../src/app.setup.js';
 
 // Needs the docker-compose Postgres running (readiness hits the DB).
 describe('API foundation (e2e)', () => {
@@ -10,7 +11,8 @@ describe('API foundation (e2e)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication();
+    app = moduleRef.createNestApplication({ bodyParser: false });
+    setupApp(app);
     await app.init();
   });
 
@@ -36,7 +38,7 @@ describe('API foundation (e2e)', () => {
   });
 
   it('returns the stable error envelope for unknown routes', async () => {
-    const res = await request(app.getHttpServer()).get('/nope').expect(404);
+    const res = await request(app.getHttpServer()).get('/api/v1/nope').expect(404);
     expect(res.body.error).toMatchObject({ code: 'NOT_FOUND', requestId: res.headers['x-request-id'] });
     expect(JSON.stringify(res.body)).not.toMatch(/stack|at .*\(/);
   });
