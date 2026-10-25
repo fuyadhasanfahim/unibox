@@ -7,7 +7,9 @@ import {
   permissionsFor,
   tenantRoleSchema,
   tenantStatusSchema,
+  transferOwnershipSchema,
   updateMemberRoleSchema,
+  updateWorkspaceSchema,
   type MyWorkspaces,
 } from '@repo/shared';
 import { createZodDto } from 'nestjs-zod';
@@ -16,12 +18,15 @@ import { RequirePermissions } from '../tenancy/guards.js';
 import { CurrentActor, Tenant, type Actor, type TenantContext } from '../tenancy/tenant-context.js';
 import { MembersService } from './members.service.js';
 import { MyInvitationsService } from './my-invitations.service.js';
+import { WorkspaceService } from './workspace.service.js';
 
 class InviteMemberDto extends createZodDto(inviteMemberSchema) {}
 class UpdateMemberRoleDto extends createZodDto(updateMemberRoleSchema) {}
 class MemberParams extends createZodDto(memberParamsSchema) {}
 class InvitationParams extends createZodDto(invitationParamsSchema) {}
 class MyInvitationParams extends createZodDto(myInvitationParamsSchema) {}
+class UpdateWorkspaceDto extends createZodDto(updateWorkspaceSchema) {}
+class TransferOwnershipDto extends createZodDto(transferOwnershipSchema) {}
 
 @Controller('me')
 export class MeController {
@@ -68,7 +73,36 @@ export class MeController {
 
 @Controller('tenants/:tenantId')
 export class WorkspaceMembersController {
-  constructor(private readonly members: MembersService) {}
+  constructor(
+    private readonly members: MembersService,
+    private readonly workspace: WorkspaceService,
+  ) {}
+
+  @Get()
+  @RequirePermissions('workspace.read')
+  details(@Tenant() ctx: TenantContext) {
+    return this.workspace.get(ctx);
+  }
+
+  @Patch()
+  @RequirePermissions('workspace.update')
+  update(@Tenant() ctx: TenantContext, @Body() body: UpdateWorkspaceDto) {
+    return this.workspace.update(ctx, body);
+  }
+
+  @Post('leave')
+  @HttpCode(204)
+  @RequirePermissions('workspace.read')
+  leave(@Tenant() ctx: TenantContext) {
+    return this.members.leave(ctx);
+  }
+
+  @Post('transfer-ownership')
+  @HttpCode(200)
+  @RequirePermissions('workspace.transfer')
+  transfer(@Tenant() ctx: TenantContext, @Body() body: TransferOwnershipDto) {
+    return this.members.transferOwnership(ctx, body.memberId);
+  }
 
   @Get('members')
   @RequirePermissions('members.read')

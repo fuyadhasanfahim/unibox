@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "../_components/coming-soon";
+import { SettingsView } from "./_components/settings-view";
 
 export const metadata: Metadata = { title: "Settings · Unibox" };
 
 export default function SettingsPage() {
-  return <ComingSoon href="/settings" phase="Phase 1 (RBAC)" />;
+  return <SettingsView />;
 }

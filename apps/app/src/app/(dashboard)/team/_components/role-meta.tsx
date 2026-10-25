@@ -44,6 +44,7 @@ export const PERMISSION_INFO: Record<Permission, { label: string; group: string 
   "workspace.read": { label: "View the workspace", group: "Workspace" },
   "workspace.update": { label: "Edit workspace settings", group: "Workspace" },
   "workspace.delete": { label: "Delete the workspace", group: "Workspace" },
+  "workspace.transfer": { label: "Transfer ownership", group: "Workspace" },
   "members.read": { label: "See team members", group: "Team" },
   "members.invite": { label: "Invite people", group: "Team" },
   "members.update_role": { label: "Change roles", group: "Team" },

@@ -10,6 +10,8 @@ import type {
   MyWorkspaces,
   Permission,
   TenantRole,
+  UpdateWorkspaceInput,
+  WorkspaceDetails,
 } from "@repo/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMounted } from "@/hooks/use-mounted";
@@ -21,6 +23,7 @@ export const workspaceKeys = {
   myInvitations: ["me", "invitations"] as const,
   members: (tenantId: string) => ["tenants", tenantId, "members"] as const,
   invitations: (tenantId: string) => ["tenants", tenantId, "invitations"] as const,
+  details: (tenantId: string) => ["tenants", tenantId, "details"] as const,
 };
 
 export function useMyWorkspaces() {
@@ -149,5 +152,52 @@ export function useRemoveMember(tenantId: string) {
   return useMutation({
     mutationFn: (memberId: string) => api<void>(`/tenants/${tenantId}/members/${memberId}`, { method: "DELETE" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.members(tenantId) }),
+  });
+}
+
+export function useWorkspaceDetails(tenantId: string | undefined) {
+  return useQuery({
+    queryKey: workspaceKeys.details(tenantId ?? ""),
+    queryFn: () => api<WorkspaceDetails>(`/tenants/${tenantId}`),
+    enabled: Boolean(tenantId),
+  });
+}
+
+export function useUpdateWorkspace(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateWorkspaceInput) =>
+      api<WorkspaceDetails>(`/tenants/${tenantId}`, { method: "PATCH", body: JSON.stringify(input) }),
+    onSuccess: (details) => {
+      qc.setQueryData(workspaceKeys.details(tenantId), details);
+      void qc.invalidateQueries({ queryKey: workspaceKeys.mine }); // name shows in the switcher
+    },
+  });
+}
+
+export function useTransferOwnership(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      api<{ newOwnerMemberId: string; yourRole: TenantRole }>(`/tenants/${tenantId}/transfer-ownership`, {
+        method: "POST",
+        body: JSON.stringify({ memberId }),
+      }),
+    // Your own role changed: refresh permissions and the member list.
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+export function useLeaveWorkspace(tenantId: string) {
+  const qc = useQueryClient();
+  const session = authClient.useSession();
+  return useMutation({
+    mutationFn: () => api<void>(`/tenants/${tenantId}/leave`, { method: "POST" }),
+    onSuccess: async () => {
+      // The server cleared this workspace from the session; pick up whatever is active next.
+      await session.refetch();
+      qc.removeQueries({ queryKey: ["tenants", tenantId] });
+      await qc.invalidateQueries({ queryKey: workspaceKeys.mine });
+    },
   });
 }

@@ -15,6 +15,28 @@ export const inviteMemberSchema = z.strictObject({
   role: tenantRoleSchema,
 });
 
+// IANA zone names only (what Intl and date libraries understand), e.g. "Asia/Dhaka".
+export const timeZoneSchema = z
+  .string()
+  .max(64)
+  .refine((tz) => {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: tz });
+      return tz.includes("/") || tz === "UTC";
+    } catch {
+      return false;
+    }
+  }, "Choose a valid time zone");
+
+export const updateWorkspaceSchema = z
+  .strictObject({
+    name: z.string().trim().min(2, "Use at least 2 characters").max(80, "Keep it under 80 characters").optional(),
+    timeZone: timeZoneSchema.optional(),
+  })
+  .refine((v) => v.name !== undefined || v.timeZone !== undefined, "Nothing to update");
+
+export const transferOwnershipSchema = z.strictObject({ memberId: idSchema });
+
 export const updateMemberRoleSchema = z.strictObject({
   role: tenantRoleSchema,
 });
@@ -30,6 +52,7 @@ export const setTenantStatusSchema = z.strictObject({
   reason: z.string().trim().min(3, "Give a short reason").max(500),
 });
 
+export type UpdateWorkspaceInput = z.infer<typeof updateWorkspaceSchema>;
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 export type UpdateMemberRoleInput = z.infer<typeof updateMemberRoleSchema>;
 export type CreateTenantInput = z.infer<typeof createTenantSchema>;
@@ -83,3 +106,13 @@ export type MyInvitationDto = {
 };
 
 export type AcceptInvitationResult = { workspaceId: string; workspaceName: string; role: TenantRole };
+
+export type WorkspaceDetails = {
+  id: string;
+  name: string;
+  slug: string;
+  status: TenantStatus;
+  timeZone: string;
+  defaultLocale: string;
+  createdAt: string;
+};

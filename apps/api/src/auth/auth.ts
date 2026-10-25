@@ -1,4 +1,5 @@
 import { betterAuth } from 'better-auth';
+import { randomUUID } from 'node:crypto';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { organization } from 'better-auth/plugins';
@@ -84,6 +85,8 @@ export function createAuth({ prisma, email, env }: Deps) {
         '/sign-in/email': { window: 60, max: 5 },
         '/request-password-reset': { window: 300, max: 3 },
         '/reset-password': { window: 60, max: 5 },
+        // Guessing the current password from a hijacked session is throttled too.
+        '/change-password': { window: 60, max: 5 },
       },
     },
 
@@ -92,6 +95,22 @@ export function createAuth({ prisma, email, env }: Deps) {
         if (ctx.path.startsWith('/organization/') && !ALLOWED_ORGANIZATION_PATHS.has(ctx.path)) {
           throw new APIError('FORBIDDEN', { message: 'Use the workspace API for this action.' });
         }
+      }),
+      // Account security events go to the audit log (tenant-less: they belong to the user).
+      after: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== '/change-password' || ctx.context.returned instanceof APIError) return;
+        const userId = ctx.context.session?.user.id ?? ctx.context.newSession?.user.id;
+        if (!userId) return;
+        await prisma.auditLog.create({
+          data: {
+            id: randomUUID(),
+            actorUserId: userId,
+            action: 'account.password_changed',
+            resourceType: 'user',
+            resourceId: userId,
+            metadata: { revokedOtherSessions: Boolean((ctx.body as { revokeOtherSessions?: boolean } | undefined)?.revokeOtherSessions) },
+          },
+        });
       }),
     },
 

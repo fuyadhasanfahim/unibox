@@ -188,6 +188,61 @@ export class MembersService {
     });
   }
 
+  // Any member may leave; the last owner must hand over ownership first.
+  async leave(ctx: TenantContext) {
+    const db = this.tenantPrisma.forTenant(ctx.tenantId);
+    await db.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${ctx.tenantId} FOR UPDATE`;
+      const me = await tx.member.findFirst({ where: { id: ctx.memberId }, select: { role: true } });
+      if (!me) throw new NotFoundException('You are not a member of this workspace.');
+      if (me.role === 'owner') {
+        const owners = await tx.member.count({ where: { role: 'owner' } });
+        if (owners <= 1) {
+          throw new ConflictException({ code: 'LAST_OWNER', message: 'Transfer ownership to someone else before leaving.' });
+        }
+      }
+      await tx.member.deleteMany({ where: { id: ctx.memberId } });
+      await tx.session.updateMany({ where: { userId: ctx.userId, activeOrganizationId: ctx.tenantId }, data: { activeOrganizationId: null } });
+      await this.audit.log(
+        {
+          tenantId: ctx.tenantId,
+          actorUserId: ctx.userId,
+          action: 'member.left',
+          resourceType: 'member',
+          resourceId: ctx.memberId,
+          requestId: ctx.requestId,
+          metadata: { role: me.role },
+        },
+        tx,
+      );
+    });
+  }
+
+  // Makes another member owner and steps the current owner down to admin, atomically.
+  async transferOwnership(ctx: TenantContext, memberId: string) {
+    const db = this.tenantPrisma.forTenant(ctx.tenantId);
+    return db.$transaction(async (tx) => {
+      const target = await this.lockAndLoadTarget(tx, ctx, memberId, 'You already own this workspace.');
+      if (!hasPermission(target.actorRole, 'workspace.transfer')) throw new ForbiddenException('Only an owner can transfer ownership.');
+
+      await tx.member.updateMany({ where: { id: target.id }, data: { role: 'owner' } });
+      await tx.member.updateMany({ where: { id: ctx.memberId }, data: { role: 'admin' } });
+      await this.audit.log(
+        {
+          tenantId: ctx.tenantId,
+          actorUserId: ctx.userId,
+          action: 'workspace.ownership_transferred',
+          resourceType: 'member',
+          resourceId: target.id,
+          requestId: ctx.requestId,
+          metadata: { toUserId: target.userId, fromRole: target.role, previousOwnerNowRole: 'admin' },
+        },
+        tx,
+      );
+      return { newOwnerMemberId: target.id, yourRole: 'admin' as const };
+    });
+  }
+
   // Locks the tenant row so concurrent role changes/removals are serialized; without it two owners
   // demoting each other at the same moment could both pass the "another owner exists" check.
   private async lockAndLoadTarget(tx: Tx, ctx: TenantContext, memberId: string, selfMessage: string) {

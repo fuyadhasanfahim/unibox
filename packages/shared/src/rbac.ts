@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   "workspace.read",
   "workspace.update",
   "workspace.delete",
+  "workspace.transfer",
   "members.read",
   "members.invite",
   "members.update_role",
@@ -69,7 +70,7 @@ const ADMIN: readonly Permission[] = [
   "channels.manage",
 ];
 
-const OWNER: readonly Permission[] = [...ADMIN, "workspace.delete"];
+const OWNER: readonly Permission[] = [...ADMIN, "workspace.delete", "workspace.transfer"];
 
 export const ROLE_PERMISSIONS: Record<TenantRole, ReadonlySet<Permission>> = {
   owner: new Set(OWNER),

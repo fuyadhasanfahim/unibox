@@ -87,6 +87,9 @@ model Organization {
   metadata  String?
   // pending -> active (platform admin approves) -> suspended | closed
   status    String   @default("pending")
+  // IANA time zone (e.g. "Asia/Dhaka") for due dates and reports; BCP 47 locale for formatting.
+  timeZone      String @default("UTC")
+  defaultLocale String @default("en")
   createdAt DateTime @default(now())
 
   members     Member[]
