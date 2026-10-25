@@ -7,6 +7,7 @@ import { createAuth } from './auth/auth.js';
 import { InvitesController } from './auth/invites.controller.js';
 import { InvitesService } from './auth/invites.service.js';
 import { AuditService } from './audit/audit.service.js';
+import { ChannelsModule } from './channels/channels.module.js';
 import { AccessLogInterceptor } from './common/access-log.interceptor.js';
 import { ErrorEnvelopeFilter } from './common/error-envelope.filter.js';
 import { requestIdMiddleware } from './common/request-id.middleware.js';
@@ -16,6 +17,7 @@ import { EmailService } from './email/email.service.js';
 import { HealthModule } from './health/health.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PrismaService } from './prisma/prisma.service.js';
+import { QueueModule } from './queue/queue.module.js';
 import { TenantPrismaService } from './prisma/tenant-prisma.service.js';
 import { PlatformTenantsController } from './platform/platform-tenants.controller.js';
 import { PlatformTenantsService } from './platform/platform-tenants.service.js';
@@ -47,6 +49,8 @@ import { MeController, WorkspaceMembersController } from './workspaces/workspace
         bodyParser: { json: { limit: '1mb' }, urlencoded: { limit: '1mb', extended: false } },
       }),
     }),
+    QueueModule,
+    ChannelsModule,
     HealthModule,
   ],
   controllers: [InvitesController, MeController, WorkspaceMembersController, PlatformTenantsController],

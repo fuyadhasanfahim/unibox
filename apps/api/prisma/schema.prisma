@@ -80,20 +80,22 @@ model Verification {
 
 // Tenant (workspace)
 model Organization {
-  id        String   @id
-  name      String
-  slug      String   @unique
-  logo      String?
-  metadata  String?
+  id            String   @id
+  name          String
+  slug          String   @unique
+  logo          String?
+  metadata      String?
   // pending -> active (platform admin approves) -> suspended | closed
-  status    String   @default("pending")
+  status        String   @default("pending")
   // IANA time zone (e.g. "Asia/Dhaka") for due dates and reports; BCP 47 locale for formatting.
-  timeZone      String @default("UTC")
-  defaultLocale String @default("en")
-  createdAt DateTime @default(now())
+  timeZone      String   @default("UTC")
+  defaultLocale String   @default("en")
+  createdAt     DateTime @default(now())
 
-  members     Member[]
-  invitations Invitation[]
+  members         Member[]
+  invitations     Invitation[]
+  channelAccounts ChannelAccount[]
+  contacts        Contact[]
 
   @@index([status, createdAt])
 }
@@ -153,4 +155,173 @@ model AuditLog {
 
   @@index([tenantId, createdAt])
   @@index([actorUserId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Channels and conversations (Meta: WhatsApp, Messenger, Instagram)
+// Allowed values for the String columns are enforced by CHECK constraints (see migration) and Zod.
+// Child rows reference their parent by (tenantId, id): a row can never point at another tenant's parent.
+// ---------------------------------------------------------------------------
+
+// A connected provider account (WhatsApp phone number, Facebook Page, Instagram professional account).
+model ChannelAccount {
+  id                   String    @id @default(cuid())
+  tenantId             String
+  // whatsapp | messenger | instagram
+  type                 String
+  // Provider-side id: WhatsApp phone_number_id, Page id, or Instagram account id.
+  externalAccountId    String
+  displayName          String?
+  // pending | active | needs_reauth | disabled | error
+  status               String    @default("pending")
+  // Envelope-encrypted token (see TokenVaultService). Never selected into API responses.
+  encryptedAccessToken Bytes?
+  tokenKeyVersion      String?
+  tokenExpiresAt       DateTime?
+  grantedScopes        String[]
+  metadata             Json?
+  connectedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  tenant        Organization      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  identities    ContactIdentity[]
+  conversations Conversation[]
+  messages      Message[]
+  webhookEvents WebhookEvent[]
+
+  // One tenant at a time can own a provider account.
+  @@unique([type, externalAccountId])
+  @@unique([tenantId, id])
+  @@index([tenantId, type, status])
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  tenantId    String
+  displayName String?
+  email       String?
+  phoneE164   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant        Organization      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  identities    ContactIdentity[]
+  conversations Conversation[]
+
+  @@unique([tenantId, id])
+  @@index([tenantId, displayName])
+  @@index([tenantId, email])
+  @@index([tenantId, phoneE164])
+}
+
+// Provider-scoped identity of a contact (a WhatsApp number, a PSID, an IGSID).
+model ContactIdentity {
+  id               String   @id @default(cuid())
+  tenantId         String
+  channelAccountId String
+  contactId        String
+  externalUserId   String
+  providerProfile  Json?
+  createdAt        DateTime @default(now())
+
+  channelAccount ChannelAccount @relation(fields: [tenantId, channelAccountId], references: [tenantId, id], onDelete: Cascade)
+  contact        Contact        @relation(fields: [tenantId, contactId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([channelAccountId, externalUserId])
+  @@index([tenantId, contactId])
+}
+
+model Conversation {
+  id                     String    @id @default(cuid())
+  tenantId               String
+  channelAccountId       String
+  contactId              String
+  externalConversationId String
+  // open | closed
+  status                 String    @default("open")
+  unreadCount            Int       @default(0)
+  // Last message from the customer: WhatsApp's 24h reply window and Messenger's messaging window start here.
+  lastInboundAt          DateTime?
+  lastMessageAt          DateTime?
+  lastMessagePreview     String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  channelAccount ChannelAccount @relation(fields: [tenantId, channelAccountId], references: [tenantId, id], onDelete: Cascade)
+  contact        Contact        @relation(fields: [tenantId, contactId], references: [tenantId, id], onDelete: Cascade)
+  messages       Message[]
+
+  @@unique([channelAccountId, externalConversationId])
+  @@unique([tenantId, id])
+  @@index([tenantId, status, lastMessageAt(sort: Desc)])
+  @@index([tenantId, contactId])
+}
+
+model Message {
+  id                String    @id @default(cuid())
+  tenantId          String
+  conversationId    String
+  channelAccountId  String
+  // Provider message id (wamid / mid). Null until the provider accepts an outbound message.
+  externalMessageId String?
+  // inbound | outbound
+  direction         String
+  // received | queued | sending | sent | delivered | read | failed
+  status            String
+  messageType       String
+  text              String?
+  senderExternalId  String?
+  sentByUserId      String?
+  providerTimestamp DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  metadata          Json?
+
+  conversation   Conversation   @relation(fields: [tenantId, conversationId], references: [tenantId, id], onDelete: Cascade)
+  channelAccount ChannelAccount @relation(fields: [tenantId, channelAccountId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([channelAccountId, externalMessageId])
+  @@index([tenantId, conversationId, createdAt])
+  @@index([tenantId, status, createdAt])
+}
+
+// Raw inbound provider events, saved before we acknowledge. System table: no tenant id, because the
+// tenant is only known after the channel account is resolved. Read it with the base client only.
+model WebhookEvent {
+  id               String    @id @default(cuid())
+  provider         String
+  channelAccountId String?
+  // Idempotency key built from the provider's own ids (see ingestion service).
+  externalEventKey String
+  payloadDigest    String
+  // Dropped by the retention job; the digest stays.
+  payload          Json?
+  // pending | processing | succeeded | failed | dead_letter
+  status           String    @default("pending")
+  attempts         Int       @default(0)
+  receivedAt       DateTime  @default(now())
+  processedAt      DateTime?
+  lastErrorCode    String?
+
+  channelAccount ChannelAccount? @relation(fields: [channelAccountId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, externalEventKey])
+  @@index([status, receivedAt])
+}
+
+// Transactional outbox: work that must happen if (and only if) the surrounding change commits.
+model OutboxEvent {
+  id            String   @id @default(cuid())
+  tenantId      String
+  kind          String
+  dedupeKey     String   @unique
+  payload       Json
+  // pending | processing | succeeded | failed | dead_letter
+  status        String   @default("pending")
+  attempts      Int      @default(0)
+  nextAttemptAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([status, nextAttemptAt])
 }

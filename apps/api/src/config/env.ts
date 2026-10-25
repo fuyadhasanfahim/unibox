@@ -31,11 +31,37 @@ export const envSchema = z
     EMAIL_FROM: z.string().min(3).default('Unibox <onboarding@resend.dev>'),
     // Dev inbox (Mailpit). Takes priority over Resend so dev mail never reaches real addresses.
     MAILPIT_URL: optional(z.url()),
+    // Channel token encryption keys, "version:base64(32 bytes)", comma-separated. The FIRST key encrypts new
+    // tokens; older ones stay listed so existing tokens still decrypt until they are re-encrypted.
+    TOKEN_ENCRYPTION_KEYS: z.string().min(1).transform((v, ctx) => {
+      const keys = new Map<string, Buffer>();
+      for (const entry of v.split(',')) {
+        const [version, b64, ...rest] = entry.trim().split(':');
+        const key = b64 ? Buffer.from(b64, 'base64') : undefined;
+        if (!version || rest.length || key?.length !== 32 || keys.has(version)) {
+          ctx.addIssue({ code: 'custom', message: 'must be "version:base64(32 bytes)" entries with unique versions' });
+          return z.NEVER;
+        }
+        keys.set(version, key);
+      }
+      return { current: keys.keys().next().value as string, keys };
+    }),
+    // Meta app. Optional in dev until the app exists; channels stay disabled without them.
+    META_APP_ID: optional(z.string().regex(/^\d+$/, 'must be a numeric Meta app id')),
+    META_APP_SECRET: optional(z.string().min(16)),
+    META_WEBHOOK_VERIFY_TOKEN: optional(z.string().min(16)),
+    // Pinned Graph API version; bump deliberately after reading Meta's changelog.
+    META_GRAPH_VERSION: z.string().regex(/^v\d+\.\d+$/, 'must look like v23.0').default('v23.0'),
   })
   .superRefine((env, ctx) => {
     // Dev may log email links instead of sending; production must really send them.
     if (env.NODE_ENV === 'production' && !env.RESEND_API_KEY) {
       ctx.addIssue({ code: 'custom', path: ['RESEND_API_KEY'], message: 'is required in production' });
+    }
+    const meta = [env.META_APP_ID, env.META_APP_SECRET, env.META_WEBHOOK_VERIFY_TOKEN];
+    // All three or none: a half-configured Meta app would fail at the first webhook instead of at boot.
+    if (meta.some(Boolean) && !meta.every(Boolean)) {
+      ctx.addIssue({ code: 'custom', path: ['META_APP_ID'], message: 'META_APP_ID, META_APP_SECRET and META_WEBHOOK_VERIFY_TOKEN must be set together' });
     }
     if (env.NODE_ENV === 'production' && env.MAILPIT_URL) {
       ctx.addIssue({ code: 'custom', path: ['MAILPIT_URL'], message: 'must not be set in production' });

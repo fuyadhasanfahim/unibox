@@ -5,6 +5,11 @@ import { PrismaService } from './prisma.service.js';
 const TENANT_MODELS: Record<string, string> = {
   Member: 'organizationId',
   Invitation: 'organizationId',
+  ChannelAccount: 'tenantId',
+  Contact: 'tenantId',
+  ContactIdentity: 'tenantId',
+  Conversation: 'tenantId',
+  Message: 'tenantId',
 };
 
 const SCOPED_READS_AND_BULK_WRITES = new Set([
